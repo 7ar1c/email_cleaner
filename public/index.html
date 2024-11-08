@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>clean up yo email</title>
+  <style>
+    /* Simple spinner CSS */
+    .spinner {
+      border: 4px solid #f3f3f3; /* Light grey background */
+      border-top: 4px solid #3498db; /* Blue spinner color */
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 2s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <h1>Clean up yo email</h1>
+
+  <!-- Login Button -->
+  <p><a href="/auth">Login with Google</a></p>
+
+  <!-- Button to retrieve unique senders and unsubscribe links -->
+  <button onclick="fetchRecentUnsubscribeEmails()">Get Senders and Unsubscribe Links</button>
+  
+  <!-- New button for moving emails under a label -->
+  <button id="moveEmailsBtn">Move Emails Containing "Unsubscribe"</button>
+
+  <!-- Spinner for processing state -->
+  <div id="spinner" class="spinner" style="display: none;"></div>
+
+  <div id="emailResults"></div>
+  <div id="status"></div>
+
+  <!-- Display area for recent emails -->
+  <div id="recent-emails"></div>
+
+  <script>
+    // Function to fetch recent emails and display senders and unsubscribe links
+    async function fetchRecentUnsubscribeEmails() {
+      const spinner = document.getElementById('spinner');
+      const displayArea = document.getElementById('recent-emails');
+      const statusDiv = document.getElementById('status');
+
+      // Show the spinner and update status
+      spinner.style.display = 'inline-block';
+      statusDiv.textContent = 'Fetching recent emails... Please wait.';
+
+      try {
+      const response = await fetch('/recent-emails');
+      if (!response.ok) throw new Error('Failed to fetch recent emails');
+      const data = await response.json();
+      
+      displayArea.innerHTML = '';  // Clear previous results
+
+      data.forEach(item => {
+        const senderDiv = document.createElement('div');
+        senderDiv.innerHTML = `<h3>${item.sender}</h3>`;
+
+        const linkList = document.createElement('ul');
+        item.unsubscribeLinks.forEach(link => {
+        const linkItem = document.createElement('li');
+        linkItem.innerHTML = `<a href="${link}" target="_blank">${link}</a>`;
+        linkList.appendChild(linkItem);
+        });
+
+        senderDiv.appendChild(linkList);
+        displayArea.appendChild(senderDiv);
+      });
+
+      statusDiv.textContent = 'Recent emails fetched successfully.';
+      } catch (error) {
+      displayArea.textContent = 'Error: ' + error.message;
+      statusDiv.textContent = 'Failed to fetch recent emails.';
+      } finally {
+      // Hide the spinner after processing is complete
+      spinner.style.display = 'none';
+      }
+    }
+
+    // Add click event listener for the "Move Emails" button
+    document.getElementById('moveEmailsBtn').addEventListener('click', async () => {
+      const button = document.getElementById('moveEmailsBtn');
+      const spinner = document.getElementById('spinner');
+      const statusDiv = document.getElementById('status');
+
+      // Show the spinner and change the button text to "Processing"
+      button.disabled = true;  // Disable the button to prevent multiple clicks
+      spinner.style.display = 'inline-block';  // Show the spinner
+      statusDiv.textContent = 'Processing... Please wait.';
+
+      try {
+        // Trigger the backend route to move emails
+        const response = await fetch('/move-emails', {
+          method: 'GET',
+        });
+
+        if (response.ok) {
+          statusDiv.textContent = 'Emails successfully moved under the "Unsubscribe" label.';
+        } else {
+          statusDiv.textContent = 'Failed to move emails.';
+        }
+      } catch (error) {
+        console.error('Error moving emails:', error);
+        statusDiv.textContent = 'An error occurred while moving emails.';
+      } finally {
+        // Hide the spinner and re-enable the button after the request is complete
+        spinner.style.display = 'none';
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
